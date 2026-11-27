@@ -3,6 +3,7 @@ name = "obui"
 version = "0.1.0"
 edition = "2024"
 description = "Obroom 程序共用的 Win32 界面零件 (卡片式设置界面、弹窗、暗色主题), obcmd 与 obcleaner 共用"
+license = "MIT"
 publish = false
 
 [dependencies]
