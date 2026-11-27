@@ -571,9 +571,15 @@ pub fn app_icon(hinst: HINSTANCE, small: bool) -> HICON {
     unsafe { LoadImageW(Some(hinst), PCWSTR(ICON_ID as usize as *const u16), IMAGE_ICON, cx, cx, LR_DEFAULTCOLOR).map(|h| HICON(h.0)).unwrap_or_default() }
 }
 
-/// 给窗口挂上程序图标 (标题栏左上角 + Alt+Tab)。DLGMODALFRAME 的窗口光给窗口类图标标题栏不画, 得 WM_SETICON。
+/// 给窗口挂上程序图标 (标题栏左上角 + 任务栏 / Alt+Tab)。DLGMODALFRAME 的窗口光给窗口类图标标题栏不画, 得 WM_SETICON。
 /// 两个尺寸各取一次留着 (LoadImageW 每次都新建句柄, 一个弹窗泄一对太难看)
+///
+/// **有所有者的窗口 (挂在主窗口下的对话框) 不挂**: 跟系统对话框一样标题栏不带图标。
+/// 只有没所有者的窗口才挂 —— 它们单独出现在任务栏和 Alt+Tab 里, 没图标就是个通用图标
 pub fn set_window_icon(hwnd: HWND) {
+    if unsafe { GetWindow(hwnd, GW_OWNER) }.is_ok_and(|o| !o.is_invalid()) {
+        return;
+    }
     static ICONS: std::sync::OnceLock<(isize, isize)> = std::sync::OnceLock::new();
     let (small, big) = *ICONS.get_or_init(|| {
         let hinst = unsafe { windows::Win32::System::LibraryLoader::GetModuleHandleW(None) }.unwrap_or_default().into();
@@ -585,7 +591,8 @@ pub fn set_window_icon(hwnd: HWND) {
     }
 }
 
-/// 自建窗口建好之后调一次: 程序图标 + 标题栏 + 窗口里每一个子控件都按 dark 装扮; bg / fg = 列表的底色和字色。
+/// 自建窗口建好之后调一次: 程序图标 (没所有者的窗口才挂, 见 [`set_window_icon`]) + 标题栏 + 窗口里每一个子控件都按 dark 装扮;
+/// bg / fg = 列表的底色和字色。
 ///
 /// 为什么要按类名逐个换主题: 下拉框 / 复选框 / 按钮这些**有视觉主题的系统控件根本不吃
 /// WM_CTLCOLOR\***, 主题背景直接盖过去。只能换成资源管理器自己那套暗色主题类名
@@ -593,7 +600,7 @@ pub fn set_window_icon(hwnd: HWND) {
 /// 这组名字没有文档, 但认不出来时系统退回默认样式, 不报错不崩 (实测过)。
 pub fn dress(hwnd: HWND, dark: bool, bg: COLORREF, fg: COLORREF) {
     use windows::Win32::UI::Controls::{LVM_GETHEADER, LVM_SETBKCOLOR, LVM_SETTEXTBKCOLOR, LVM_SETTEXTCOLOR};
-    // 左上角的程序图标: 所有自建弹窗统一一个样子 (浅色也要, 所以放在下面那个 return 前面)
+    // 左上角的程序图标 (没所有者的窗口才挂; 浅色也要, 所以放在下面那个 return 前面)
     set_window_icon(hwnd);
     // **浅色下一个字都不碰。** 这些窗口是开的时候建、关的时候销毁, 没有"上一次设过的暗色"要还原;
     // 而给本来没设过主题的控件去 SetWindowTheme(NULL) 是会出事的 —— 实测把批量改名框画残了

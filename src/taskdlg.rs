@@ -1,5 +1,5 @@
 //! 系统任务对话框 (TaskDialog) 的两个包装: 自定义按钮的 [`dialog`] 和 `MessageBoxW` 的替身 [`msgbox`]。
-//! 都在标题栏挂程序图标 (所有弹窗统一带 logo), 正文里的 `<a href>` 用浏览器打开 (只放 http(s))。
+//! 没有所有者时标题栏挂程序图标 (见 [`set_window_icon`]), 正文里的 `<a href>` 用浏览器打开 (只放 http(s))。
 
 use windows::Win32::Foundation::*;
 use windows::Win32::UI::Controls::*;
@@ -47,9 +47,9 @@ pub fn dialog(owner: HWND, title: &str, main: &str, content: &str, buttons: &[(i
     pressed
 }
 
-/// 系统 `MessageBoxW` 的替身: 参数、返回值一模一样 (IDOK / IDYES / IDNO / IDCANCEL), 但长得跟 [`dialog`] 一样, 标题栏带程序图标
-/// (系统消息框挂不了)。认 MB_OK / OKCANCEL / YESNO / YESNOCANCEL、MB_DEFBUTTON2、MB_SETFOREGROUND;
-/// 正文一般不放图标 (logo 只在标题栏左上角, 正文再来一个大的是重复); 例外是**危险操作的确认** ——
+/// 系统 `MessageBoxW` 的替身: 参数、返回值一模一样 (IDOK / IDYES / IDNO / IDCANCEL), 但长得跟 [`dialog`] 一样;
+/// 没有 owner 时标题栏带程序图标 (系统消息框挂不了)。认 MB_OK / OKCANCEL / YESNO / YESNOCANCEL、MB_DEFBUTTON2、MB_SETFOREGROUND;
+/// 正文一般不放图标; 例外是**危险操作的确认** ——
 /// MB_ICONWARNING 又带选择 (是/否、确定/取消; 永久删除、覆盖、结束进程这些) 放系统的黄色警告三角, 让它跟普通提示区分开。
 /// 只有「确定」的警告是普通提示, 不放。unsafe 跟原函数同理: text / caption 是裸指针
 ///
@@ -96,9 +96,9 @@ where
     MESSAGEBOX_RESULT(pressed)
 }
 
-/// 两件事: 建好时挂程序图标; 正文里的链接被点了就用浏览器打开
+/// 两件事: 建好时挂程序图标 (没 owner 才挂); 正文里的链接被点了就用浏览器打开
 unsafe extern "system" fn callback(hwnd: HWND, msg: TASKDIALOG_NOTIFICATIONS, _wp: WPARAM, lp: LPARAM, data: isize) -> HRESULT {
-    // 标题栏左上角也带程序图标, 跟自建弹窗一个样子 (TaskDialog 是系统画的, 不走 dress)
+    // 跟自建弹窗同一套规矩 (TaskDialog 是系统画的, 不走 dress): 有 owner 不挂, 没 owner 的单独进任务栏, 要挂
     if msg == TDN_CREATED {
         set_window_icon(hwnd);
         if data == 1 {

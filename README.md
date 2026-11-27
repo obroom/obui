@@ -15,7 +15,7 @@ and the message loop belong to the host app.
 |--------|-------------------|
 | `win` | Win32 helpers: wide strings, fonts (system message font, Segoe Fluent Icons with MDL2 fallback), colour maths, glyph-to-bitmap rendering, and dark mode: dark title bar, dark popup menus, dark scrollbars / edits / combo boxes / buttons, and `dress` to dark-theme a whole dialog in one call |
 | `card` | Owner-drawn card UI in the style of the Windows 11 Settings app: left navigation, rounded cards, buttons, toggles, checkboxes, steppers, scrollbar, focus ring. Layout produces a display list (`Frame`) and `render` paints it double-buffered |
-| `taskdlg` | `TaskDialog` wrappers: `dialog` with custom buttons and clickable links, and `msgbox`, a drop-in `MessageBoxW` replacement. Both show the app icon in the title bar |
+| `taskdlg` | `TaskDialog` wrappers: `dialog` with custom buttons and clickable links, and `msgbox`, a drop-in `MessageBoxW` replacement |
 | `search_edit` | A ✕ clear button inside a single-line search box, like HTML `<input type="search">` |
 | `cue` | Grey placeholder text in an empty edit box that stays while it has focus, like HTML `placeholder` |
 
@@ -36,7 +36,7 @@ use windows::core::w;
 fn setup(dialog: HWND, search: HWND, dark: bool) {
     search_edit::attach(search); // ✕ button inside the box
     cue::set(search, "Search"); // placeholder, stays while focused
-    // App icon in the title bar; in dark mode also darken the title bar and every child control
+    // In dark mode, darken the title bar and every child control
     win::dress(dialog, dark, win::parse_color("#202020").unwrap(), win::parse_color("#F0F0F0").unwrap());
 }
 
@@ -54,6 +54,8 @@ follows DPI and theme changes.
 ## Notes
 
 - The app icon is loaded from resource ID 1 (`win::ICON_ID`); put your icon there in your `.rc` file.
+  Like system dialogs, owned popups get no title bar icon; only unowned windows, which show up in the
+  taskbar and Alt+Tab on their own, get one.
 - Dark mode is decided by the background colour alone (`win::is_dark`); there is no separate switch.
 - `win::set_app_dark_mode` (dark popup menus) calls `uxtheme.dll` by ordinal 135 / 136, which is
   undocumented. It is the same call Explorer and many other apps use, and it is skipped before
