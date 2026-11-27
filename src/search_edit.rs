@@ -138,7 +138,7 @@ unsafe extern "system" fn subclass_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LP
 }
 
 /// `a` 向 `b` 靠 `num/den` 的线性混色 (COLORREF 是 0x00BBGGRR)。
-fn mix(a: COLORREF, b: COLORREF, num: i32, den: i32) -> COLORREF {
+pub(crate) fn mix(a: COLORREF, b: COLORREF, num: i32, den: i32) -> COLORREF {
     let ch = |sa: u32, sb: u32| -> u32 {
         let (va, vb) = ((a.0 >> sa) & 0xFF, (b.0 >> sb) & 0xFF);
         (va as i32 + (vb as i32 - va as i32) * num / den) as u32
